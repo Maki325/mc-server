@@ -1,0 +1,4 @@
+{
+  "rust-analyzer.rustfmt.extraArgs": ["--config", "tab_spaces=2"],
+  "editor.formatOnSave": true
+}
