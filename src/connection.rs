@@ -22,7 +22,6 @@ pub enum State {
   Handshake,
   Status,
   Login,
-  // Play,
 }
 
 impl Display for State {
@@ -60,15 +59,11 @@ impl Connection {
 
   pub fn hadle_handshake(&mut self) -> Result<()> {
     let packet = self.receive()?;
-    println!("hadle_handshake: {:#?}", packet);
     let handshake_packet = if let PacketToServer::Handshake(handshake) = packet {
       handshake
     } else {
-      println!("ERR");
-
       return Err(Error::UnexpectedPacket(packet, "PacketToServer::Handshake"));
     };
-    println!("handshake_packet: {:#?}", handshake_packet);
 
     self.state = handshake_packet.next_state;
 
@@ -77,7 +72,6 @@ impl Connection {
 
   pub fn handle_status(&mut self) -> Result<()> {
     let packet = self.receive()?;
-    println!("handle_status: {:#?}", packet);
     let status_packet = if let PacketToServer::Status(status_packet) = packet {
       status_packet
     } else {
@@ -85,23 +79,16 @@ impl Connection {
     };
 
     let (packet_to_send, should_close_connection) = match status_packet {
-      StatusPacketToServer::Ping(time) => {
-        println!("PING {}", time);
-        (
-          PacketToClient::Status(StatusPacketToClient::Ping(time)),
-          true,
-        )
-      }
-      StatusPacketToServer::Status => {
-        println!("STATUS");
-        // StatusPacketToClient::Status(Status::new("Hello World!".into())?)
-        (
-          PacketToClient::Status(StatusPacketToClient::Status(Status::new(
-            "                  §cHello §b§lWORLD!".into(),
-          )?)),
-          false,
-        )
-      }
+      StatusPacketToServer::Ping(time) => (
+        PacketToClient::Status(StatusPacketToClient::Ping(time)),
+        true,
+      ),
+      StatusPacketToServer::Status => (
+        PacketToClient::Status(StatusPacketToClient::Status(Status::new(
+          "                  §cHello §b§lWORLD!".into(),
+        )?)),
+        false,
+      ),
     };
 
     self.send(packet_to_send, true)?;
@@ -116,9 +103,8 @@ impl Connection {
   }
 
   pub fn tick(&mut self) -> Result<()> {
-    // let packet = self.receive()?;
-
     let result = match &self.state {
+      State::Handshake => self.hadle_handshake(),
       State::Status => self.handle_status(),
       _ => unimplemented!(),
     };
@@ -151,7 +137,6 @@ impl Connection {
 
   pub fn receive(&mut self) -> Result<PacketToServer> {
     let buf = &mut self.stream;
-    println!("self.state: {}", self.state);
     return Ok(match self.state {
       State::Handshake => PacketToServer::Handshake(HandshakePacketToServer::deserialize(buf)?),
       State::Status => PacketToServer::Status(StatusPacketToServer::deserialize(buf)?),

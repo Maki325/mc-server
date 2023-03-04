@@ -45,32 +45,27 @@ fn main() -> Result<()> {
       return true;
     });
     loop {
-      let result = listener.accept();
-      if let Ok((stream, address)) = result {
-        println!("Stream: {:#?}, address: {:#?}", stream, address);
-        println!("stream.ttl(): {}", stream.ttl()?);
-        let mut connection = Connection::new(stream, address);
-        // while let Ok(byte) = connection.stream.read_u8() {
-        //   println!("byte: {}", byte);
-        // }
-        // continue;
+      let (stream, address) = match listener.accept() {
+        Ok(result) => result,
+        Err(err) => {
+          if err.kind() == ErrorKind::WouldBlock {
+            break;
+          }
 
-        if let Err(err) = connection.hadle_handshake() {
-          println!("Error! {}", err);
-          // if err.kind() == ErrorKind::Other {
-          //   println!("Other error! {}", err);
-          // }
-        };
-        connections.push(connection);
-        continue;
-      }
-      if let Err(err) = result {
-        if err.kind() == ErrorKind::WouldBlock {
-          // println!("SKIP!");
-          break;
+          println!("Error during accept accepting new connection! {}", err);
+          continue;
         }
-        return Err(Error::IO(err));
-      }
+      };
+      let mut connection = Connection::new(stream, address);
+
+      if let Err(err) = connection.hadle_handshake() {
+        if let Error::NoPacketToReceive = err {
+        } else {
+          println!("Error during handshake! Disconnecting! {}", err);
+          continue;
+        }
+      };
+      connections.push(connection);
     }
 
     let sleep_time = sleep_subtract + tick_time.elapsed().as_millis() as u64;
@@ -78,7 +73,6 @@ fn main() -> Result<()> {
       sleep_subtract = sleep_time - TICK_SLEEP_TIME;
     } else {
       sleep_subtract = 0;
-      // println!("Sleep time: {}", TICK_SLEEP_TIME - sleep_time);
       thread::sleep(Duration::from_millis(TICK_SLEEP_TIME - sleep_time));
     }
   }

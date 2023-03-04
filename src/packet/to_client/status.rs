@@ -4,6 +4,7 @@ use crate::{
   write::{var_int_len, WriteMCExt},
 };
 use byteorder::{BigEndian, WriteBytesExt};
+use rand::Rng;
 use serde::Serialize;
 use std::io::{ErrorKind, Read, Write};
 
@@ -11,7 +12,7 @@ type MOTD = String;
 
 #[derive(Debug, Serialize)]
 pub struct Version {
-  name: String,
+  name: &'static str,
   protocol: u64,
 }
 
@@ -43,13 +44,12 @@ impl StatusData {
   pub fn new(motd: MOTD) -> StatusData {
     StatusData {
       version: Version {
-        name: "1.19.3".into(),
+        name: "1.19.3",
         protocol: 761,
-        // protocol: 249,
       },
       players: Players {
         max: 10,
-        online: 2,
+        online: rand::thread_rng().gen_range(0..=10),
         sample: vec![],
       },
       description: Description { text: motd },

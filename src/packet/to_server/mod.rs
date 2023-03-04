@@ -8,7 +8,6 @@ pub mod status;
 pub enum PacketToServer {
   Handshake(HandshakePacketToServer),
   Status(StatusPacketToServer),
-  // Ping,
 }
 
 impl Display for PacketToServer {

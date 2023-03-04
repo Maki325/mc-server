@@ -43,8 +43,6 @@ impl Packet for HandshakePacketToServer {
   fn deserialize(buf: &mut impl Read) -> Result<HandshakePacketToServer> {
     let _size = get_packet_size(buf)?;
     let id = read_var_int(buf)?;
-    println!("_size: {}", _size);
-    println!("Handshake Id: {}", id);
     return match id {
       0 => Ok(HandshakePacketToServer::new(buf)?),
       _ => Err(Error::UnknownPacket(State::Handshake, id)),

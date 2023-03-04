@@ -20,7 +20,6 @@ impl Packet for StatusPacketToServer {
   fn deserialize(buf: &mut impl Read) -> Result<StatusPacketToServer> {
     let _size = get_packet_size(buf)?;
     let id = read_var_int(buf)?;
-    println!("Status Id: {}", id);
     return match id {
       0 => Ok(StatusPacketToServer::Status),
       1 => Ok(StatusPacketToServer::Ping(buf.read_u64::<BigEndian>()?)),

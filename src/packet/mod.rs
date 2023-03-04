@@ -23,8 +23,6 @@ pub fn get_packet_size(buf: &mut impl Read) -> Result<u64> {
       if let Error::IO(e) = &e {
         if std::io::Error::kind(e) == ErrorKind::UnexpectedEof {
           return Err(Error::NoPacketToReceive);
-          // return Ok(None);
-          // return Err(Error::new(ErrorKind::Other, PacketError::NoData));
         }
       }
       return Err(e);
@@ -49,10 +47,8 @@ pub fn read_var_int_(buf: &mut impl Read, blocking: bool) -> Result<u64> {
         byteorder::ReadBytesExt::read_u8(buf)
       }
     }?;
-    // value |= (current_byte & SEGMENT_BITS) << position;
     value |= ((current_byte & SEGMENT_BITS) << position) as u64;
 
-    // println!("current_byte: {}, value: {}", current_byte, value);
     if (current_byte & CONTINUE_BIT) == 0 {
       break;
     }
@@ -61,11 +57,8 @@ pub fn read_var_int_(buf: &mut impl Read, blocking: bool) -> Result<u64> {
 
     if position >= 32 {
       return Err(Error::VarIntTooBig);
-      // return Err(std::io::Error::new(ErrorKind::Other, "VarInt is too big!"));
     }
   }
-
-  // println!("END! {} {}", u64::from_le(value), u64::from_be(value));
 
   return Ok(value);
 }
