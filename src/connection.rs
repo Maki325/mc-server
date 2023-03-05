@@ -11,11 +11,8 @@ use crate::{
   },
   result::Result,
 };
-use std::{
-  fmt::Display,
-  io::Write,
-  net::{SocketAddr, TcpStream},
-};
+use std::{fmt::Display, net::SocketAddr};
+use tokio::{io::AsyncWriteExt, net::TcpStream};
 
 #[derive(Debug)]
 pub enum State {
@@ -57,8 +54,8 @@ impl Connection {
     }
   }
 
-  pub fn hadle_handshake(&mut self) -> Result<()> {
-    let packet = self.receive()?;
+  pub async fn hadle_handshake(&mut self) -> Result<()> {
+    let packet = self.receive().await?;
     let handshake_packet = if let PacketToServer::Handshake(handshake) = packet {
       handshake
     } else {
@@ -70,8 +67,8 @@ impl Connection {
     Ok(())
   }
 
-  pub fn handle_status(&mut self) -> Result<()> {
-    let packet = self.receive()?;
+  pub async fn handle_status(&mut self) -> Result<()> {
+    let packet = self.receive().await?;
     let status_packet = if let PacketToServer::Status(status_packet) = packet {
       status_packet
     } else {
@@ -91,7 +88,7 @@ impl Connection {
       ),
     };
 
-    self.send(packet_to_send, true)?;
+    self.send(packet_to_send, true).await?;
 
     if should_close_connection {
       return Err(Error::ConnectionAborted(
@@ -102,10 +99,10 @@ impl Connection {
     }
   }
 
-  pub fn tick(&mut self) -> Result<()> {
+  pub async fn tick(&mut self) -> Result<()> {
     let result = match &self.state {
-      State::Handshake => self.hadle_handshake(),
-      State::Status => self.handle_status(),
+      State::Handshake => self.hadle_handshake().await,
+      State::Status => self.handle_status().await,
       _ => unimplemented!(),
     };
 
@@ -125,21 +122,23 @@ impl Connection {
     };
   }
 
-  pub fn send(&mut self, packet: PacketToClient, flush: bool) -> Result<()> {
-    packet.serialize(&mut self.stream)?;
+  pub async fn send(&mut self, packet: PacketToClient, flush: bool) -> Result<()> {
+    packet.serialize(&mut self.stream).await?;
 
     if flush {
-      self.stream.flush()?;
+      self.stream.flush().await?;
     }
 
     Ok(())
   }
 
-  pub fn receive(&mut self) -> Result<PacketToServer> {
+  pub async fn receive(&mut self) -> Result<PacketToServer> {
     let buf = &mut self.stream;
     return Ok(match self.state {
-      State::Handshake => PacketToServer::Handshake(HandshakePacketToServer::deserialize(buf)?),
-      State::Status => PacketToServer::Status(StatusPacketToServer::deserialize(buf)?),
+      State::Handshake => {
+        PacketToServer::Handshake(HandshakePacketToServer::deserialize(buf).await?)
+      }
+      State::Status => PacketToServer::Status(StatusPacketToServer::deserialize(buf).await?),
       _ => unimplemented!(),
     });
   }
