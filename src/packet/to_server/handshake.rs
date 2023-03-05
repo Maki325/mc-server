@@ -1,4 +1,4 @@
-use crate::{connection::State, error::Error, packet::Packet, read::ReadMCExt, result::Result};
+use crate::{connection::State, error::Error, io::ReadMCExt, packet::Packet, result::Result};
 use async_trait::async_trait;
 use byteorder::BigEndian;
 use std::marker::{Send, Unpin};

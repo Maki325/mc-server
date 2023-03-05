@@ -1,9 +1,9 @@
-pub mod to_client;
-pub mod to_server;
-
 use crate::result::Result;
 use async_trait::async_trait;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+pub mod to_client;
+pub mod to_server;
 
 #[async_trait]
 pub trait Packet {

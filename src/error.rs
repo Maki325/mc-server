@@ -1,6 +1,5 @@
-use std::{fmt::Display, io};
-
 use crate::{connection::State, packet::to_server::PacketToServer};
+use std::{fmt::Display, io};
 
 #[derive(Debug)]
 pub enum Error {

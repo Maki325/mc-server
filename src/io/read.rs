@@ -1,13 +1,11 @@
-use std::io::ErrorKind;
-
+use crate::{error::Error, result::Result};
 use async_trait::async_trait;
 use byteorder::ByteOrder;
+use std::io::ErrorKind;
 use tokio::io::AsyncReadExt;
 
-use crate::{error::Error, result::Result};
-
-const SEGMENT_BITS: u8 = 0x7F;
-const CONTINUE_BIT: u8 = 0x80;
+const SEGMENT_BITS: u8 = super::SEGMENT_BITS as u8;
+const CONTINUE_BIT: u8 = super::CONTINUE_BIT as u8;
 
 #[async_trait]
 pub trait ReadMCExt: AsyncReadExt {

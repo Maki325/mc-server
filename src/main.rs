@@ -8,10 +8,9 @@ use tokio::{net::TcpListener, task::spawn};
 
 mod connection;
 mod error;
+mod io;
 mod packet;
-mod read;
 mod result;
-mod write;
 
 const TICK_SLEEP_TIME: u64 = 1000 / 20;
 

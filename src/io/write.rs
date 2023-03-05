@@ -3,19 +3,8 @@ use async_trait::async_trait;
 use byteorder::ByteOrder;
 use tokio::io::AsyncWriteExt;
 
-pub const SEGMENT_BITS: u64 = 0x7F;
-pub const CONTINUE_BIT: u64 = 0x80;
-
-pub fn var_int_len(mut var_int: u64) -> usize {
-  let mut bytes = 0;
-  loop {
-    bytes += 1;
-    if (var_int & (!SEGMENT_BITS)) == 0 {
-      return bytes;
-    }
-    var_int >>= 7;
-  }
-}
+const SEGMENT_BITS: u64 = super::SEGMENT_BITS as u64;
+const CONTINUE_BIT: u64 = super::CONTINUE_BIT as u64;
 
 #[async_trait]
 pub trait WriteMCExt: AsyncWriteExt {

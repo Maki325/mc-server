@@ -1,7 +1,7 @@
 use crate::{
+  io::{var_int_len, WriteMCExt},
   packet::Packet,
   result::Result,
-  write::{var_int_len, WriteMCExt},
 };
 use async_trait::async_trait;
 use byteorder::BigEndian;

@@ -1,6 +1,6 @@
+use self::{handshake::HandshakePacketToServer, status::StatusPacketToServer};
 use std::fmt::Display;
 
-use self::{handshake::HandshakePacketToServer, status::StatusPacketToServer};
 pub mod handshake;
 pub mod status;
 
