@@ -1,12 +1,8 @@
-use crate::{
-  connection::State,
-  error::Error,
-  packet::{get_packet_size, read_string, read_var_int, Packet},
-  read::ReadMCExt,
-  result::Result,
-};
+use crate::{connection::State, error::Error, packet::Packet, read::ReadMCExt, result::Result};
+use async_trait::async_trait;
 use byteorder::BigEndian;
-use std::io::{Read, Write};
+use std::marker::{Send, Unpin};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[derive(Debug)]
 pub struct HandshakePacketToServer {
@@ -16,8 +12,11 @@ pub struct HandshakePacketToServer {
   pub next_state: State,
 }
 
-fn read_next_state(buf: &mut impl Read) -> Result<State> {
-  let value = read_var_int(buf)?;
+async fn read_next_state<R>(buf: &mut R) -> Result<State>
+where
+  R: AsyncReadExt + Unpin + Send,
+{
+  let value = buf.read_var_int(true).await?;
 
   return match value {
     1 => Ok(State::Status),
@@ -27,26 +26,40 @@ fn read_next_state(buf: &mut impl Read) -> Result<State> {
 }
 
 impl HandshakePacketToServer {
-  pub fn new(buf: &mut impl Read) -> Result<HandshakePacketToServer> {
+  pub async fn new<R>(buf: &mut R) -> Result<HandshakePacketToServer>
+  where
+    R: AsyncReadExt + Unpin + Send,
+  {
     return Ok(HandshakePacketToServer {
-      protocol_verision: read_var_int(buf)?,
-      server_address: read_string(buf)?,
-      server_port: buf.read_u16::<BigEndian>()?,
-      next_state: read_next_state(buf)?,
+      protocol_verision: buf.read_var_int(true).await?,
+      server_address: buf.read_string().await?,
+      server_port: ReadMCExt::read_u16::<BigEndian>(buf).await?,
+      next_state: read_next_state(buf).await?,
     });
   }
 }
 
+#[async_trait]
 impl Packet for HandshakePacketToServer {
   type Output = HandshakePacketToServer;
 
-  fn deserialize(buf: &mut impl Read) -> Result<HandshakePacketToServer> {
-    let _size = get_packet_size(buf)?;
-    let id = read_var_int(buf)?;
-    return match id {
-      0 => Ok(HandshakePacketToServer::new(buf)?),
+  async fn deserialize<R>(buf: &mut R) -> Result<HandshakePacketToServer>
+  where
+    R: AsyncReadExt + Unpin + Send,
+  {
+    println!("deserialize HandshakePacketToServer!");
+    let _size = buf.get_packet_size().await?;
+    println!("deserialize HandshakePacketToServer! {_size}");
+    let id = buf.read_var_int(true).await?;
+    println!("deserialize HandshakePacketToServer! {id}");
+    let packet = match id {
+      0 => Ok(HandshakePacketToServer::new(buf).await?),
       _ => Err(Error::UnknownPacket(State::Handshake, id)),
     };
+
+    println!("deserialize HandshakePacketToServer! {:#?}", packet);
+
+    return packet;
   }
 
   fn get_id(&self) -> u64 {
@@ -57,7 +70,10 @@ impl Packet for HandshakePacketToServer {
     unreachable!("ToServer packets should not call size_of!");
   }
 
-  fn serialize(&self, _buf: &mut impl Write) -> Result<usize> {
+  async fn serialize<W>(&self, _buf: &mut W) -> Result<usize>
+  where
+    W: AsyncWriteExt + Unpin + Send,
+  {
     unreachable!("ToServer packets should not be serialized!");
   }
 }

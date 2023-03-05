@@ -1,7 +1,11 @@
 use self::status::StatusPacketToClient;
 use super::Packet;
 use crate::result::Result;
-use std::{fmt::Display, io::Write};
+use std::{
+  fmt::Display,
+  marker::{Send, Unpin},
+};
+use tokio::io::AsyncWriteExt;
 
 pub mod status;
 
@@ -11,9 +15,12 @@ pub enum PacketToClient {
 }
 
 impl PacketToClient {
-  pub fn serialize(&self, buf: &mut impl Write) -> Result<usize> {
+  pub async fn serialize<W>(&self, buf: &mut W) -> Result<usize>
+  where
+    W: AsyncWriteExt + Unpin + Send,
+  {
     match self {
-      PacketToClient::Status(packet) => packet.serialize(buf),
+      PacketToClient::Status(packet) => packet.serialize(buf).await,
     }
   }
 }

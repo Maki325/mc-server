@@ -3,10 +3,12 @@ use crate::{
   result::Result,
   write::{var_int_len, WriteMCExt},
 };
-use byteorder::{BigEndian, WriteBytesExt};
+use async_trait::async_trait;
+use byteorder::BigEndian;
 use rand::Rng;
 use serde::Serialize;
-use std::io::{ErrorKind, Read, Write};
+use std::io::ErrorKind;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 type MOTD = String;
 
@@ -82,16 +84,20 @@ pub enum StatusPacketToClient {
   Ping(u64),
 }
 
-fn serialize_pre(buf: &mut impl Write, packet: &StatusPacketToClient) -> Result<usize> {
+async fn serialize_pre<W>(buf: &mut W, packet: &StatusPacketToClient) -> Result<usize>
+where
+  W: AsyncWriteExt + Unpin + Send,
+{
   let size = packet.size_of()?;
   let id = packet.get_id();
 
-  let size_byte_len = buf.write_var_int(size as u64)?;
-  buf.write_var_int(id)?;
+  let size_byte_len = buf.write_var_int(size as u64).await?;
+  buf.write_var_int(id).await?;
 
   return Ok(size + size_byte_len);
 }
 
+#[async_trait]
 impl Packet for StatusPacketToClient {
   type Output = StatusPacketToClient;
 
@@ -114,21 +120,27 @@ impl Packet for StatusPacketToClient {
     }
   }
 
-  fn serialize(&self, buf: &mut impl Write) -> Result<usize> {
-    let size = serialize_pre(buf, self)?;
+  async fn serialize<W>(&self, buf: &mut W) -> Result<usize>
+  where
+    W: AsyncWriteExt + Unpin + Send,
+  {
+    let size = serialize_pre(buf, self).await?;
     match self {
       StatusPacketToClient::Status(Status { status_data }) => {
-        buf.write_string(status_data)?;
+        buf.write_string(status_data).await?;
       }
       StatusPacketToClient::Ping(ping) => {
-        buf.write_u64::<BigEndian>(*ping)?;
+        WriteMCExt::write_u64::<BigEndian>(buf, *ping).await?;
       }
     }
 
     Ok(size)
   }
 
-  fn deserialize(_buf: &mut impl Read) -> Result<StatusPacketToClient> {
+  async fn deserialize<R>(_buf: &mut R) -> Result<StatusPacketToClient>
+  where
+    R: AsyncReadExt + Unpin + Send,
+  {
     unreachable!("ToClient packets should not be deserialized!");
   }
 }
