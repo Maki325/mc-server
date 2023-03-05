@@ -1,6 +1,5 @@
 use crate::{connection::Connection, error::Error, result::Result};
 use std::{
-  io::ErrorKind,
   sync::mpsc,
   thread,
   time::{Duration, Instant},
@@ -14,32 +13,23 @@ mod read;
 mod result;
 mod write;
 
+const TICK_SLEEP_TIME: u64 = 1000 / 20;
+
 #[tokio::main]
 async fn main() -> Result<()> {
-  const TICK_SLEEP_TIME: u64 = 1000 / 20;
-
   let listener = TcpListener::bind("127.0.0.1:25565").await.unwrap();
-
-  // let connections: Arc<Mutex<Vec<Connection>>> = Arc::new(Mutex::new(vec![]));
   let mut connections: Vec<Connection> = vec![];
-
   let (tx, rx) = mpsc::channel::<Connection>();
 
-  let handle = spawn(async move {
+  spawn(async move {
     loop {
-      println!("LOOP");
       let (stream, address) = match listener.accept().await {
         Ok(result) => result,
         Err(err) => {
-          if err.kind() == ErrorKind::WouldBlock {
-            break;
-          }
-
           println!("Error during accept accepting new connection! {}", err);
           continue;
         }
       };
-      println!("ACCEPTED!!! {:#?} {:#?}!!!", stream, address);
       let mut connection = Connection::new(stream, address);
 
       if let Err(err) = connection.hadle_handshake().await {
@@ -51,36 +41,21 @@ async fn main() -> Result<()> {
       };
 
       if let Err(e) = tx.send(connection) {
-        println!("TX Senf error: {}", e);
+        println!("TX Send error: {}", e);
       }
     }
   });
-  println!("handle: {:#?}", handle);
 
   let mut sleep_subtract: u64 = 0;
   loop {
-    println!("LOOOOPPP!");
     let tick_time = Instant::now();
 
     while let Ok(connection) = rx.try_recv() {
       connections.push(connection);
     }
 
-    // let q = connections
-    //   .iter()
-    //   .map(|connection| connection.tick())
-    //   .collect();
-    // let a = join!(connections.iter().map(|connection| connection.tick()));
-
     let mut idx = 0;
     while idx < connections.len() {
-      // let a = &mut connections[idx];
-      // let a = tokio::task::spawn(a.tick());
-      // let b = join!(a);
-      // for c in b {
-      //   println!("C: {}", c);
-      // }
-
       if let Err(error) = match connections[idx].tick().await {
         Err(error) => {
           match error {

@@ -61,7 +61,6 @@ impl Connection {
     } else {
       return Err(Error::UnexpectedPacket(packet, "PacketToServer::Handshake"));
     };
-    println!("handshake_packet: {:#?}", handshake_packet);
 
     self.state = handshake_packet.next_state;
 
@@ -101,7 +100,6 @@ impl Connection {
   }
 
   pub async fn tick(&mut self) -> Result<()> {
-    println!("TICK!");
     let result = match &self.state {
       State::Handshake => self.hadle_handshake().await,
       State::Status => self.handle_status().await,
@@ -135,7 +133,6 @@ impl Connection {
   }
 
   pub async fn receive(&mut self) -> Result<PacketToServer> {
-    println!("Receive connection!");
     let buf = &mut self.stream;
     return Ok(match self.state {
       State::Handshake => {

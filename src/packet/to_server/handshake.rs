@@ -47,17 +47,12 @@ impl Packet for HandshakePacketToServer {
   where
     R: AsyncReadExt + Unpin + Send,
   {
-    println!("deserialize HandshakePacketToServer!");
     let _size = buf.get_packet_size().await?;
-    println!("deserialize HandshakePacketToServer! {_size}");
     let id = buf.read_var_int(true).await?;
-    println!("deserialize HandshakePacketToServer! {id}");
     let packet = match id {
       0 => Ok(HandshakePacketToServer::new(buf).await?),
       _ => Err(Error::UnknownPacket(State::Handshake, id)),
     };
-
-    println!("deserialize HandshakePacketToServer! {:#?}", packet);
 
     return packet;
   }
